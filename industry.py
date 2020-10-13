@@ -73,7 +73,7 @@ def yearOverYearCalculation(dataFrame,dropM13):
             # Adds the modified tempGroup row to the newDF
             newDF.append(i)
     # Creates a new dataframe from the newDF 2d array.
-    newFrame = pd.DataFrame(newDF,columns=["series_id","year","period","footnote_code","value","yearOverYear"])
+    newFrame = pd.DataFrame(newDF,columns=["series_id","year","period","footnote_codes","value","yearOverYear"])
     # Sorts the new dataframe.
     newFrame = newFrame.sort_values(by=["series_id","year"])
     return newFrame
@@ -120,6 +120,10 @@ def quarteriseDataFrame(dataFrame):
     newDataFrame = pd.DataFrame(newDF, columns=["series_id","year","quarter","value"])
     # Removes the rows from the dataframe where the value == X
     newDataFrame = newDataFrame[newDataFrame["value"]!="X"]
+    newDataFrame["year"] = newDataFrame["year"].astype(str)
+    newDataFrame["quarter"] = newDataFrame["quarter"].astype(str)
+    newDataFrame["reference_period"] = newDataFrame["year"] + newDataFrame["quarter"]
+    newDataFrame = newDataFrame.drop(columns=["year","quarter"])
     return newDataFrame
 
 # Gets the average of the values in the array.
@@ -293,6 +297,21 @@ def createCustomFormattedDataFrame(dataFrame,inputArray):
     else:
         return dataFrame
 
+def modifyHeaders(dataFrame):
+    newColumns = []
+    for i in dataFrame.columns:
+        if isinstance(i,tuple):
+            labelStr = ""
+            for j in range(0,len(i)):
+                if j == 0:
+                    labelStr += str(i[j])
+                else:
+                    labelStr += "_" + str(i[j])
+            newColumns.append(labelStr)
+        else:
+            newColumns.append(i)
+    return newColumns
+
 # Converts the standard dataframe into the wide format.
 def wideFormat(dataframe,avgQrt,avgYear,timeForm,percentageChg,yearToDrop):
     # Initialises the columnTitle
@@ -304,7 +323,7 @@ def wideFormat(dataframe,avgQrt,avgYear,timeForm,percentageChg,yearToDrop):
     # Checks if the user has had the data formatted by quarters.
     if avgQrt == 1:
         # Columns to drop from the original dataframe
-        toDropFromDataframe = ["year","quarter","value"]
+        toDropFromDataframe = ["reference_period","value"]
         # Values that will be included in the wide formatting
         valuesForDF = ["value"]
         # Checks if percentage change is selected
@@ -313,13 +332,14 @@ def wideFormat(dataframe,avgQrt,avgYear,timeForm,percentageChg,yearToDrop):
             toDropFromDataframe.append("percent_change")
             valuesForDF.append("percent_change")
         # Pivots the dataframe based on the values list.
-        df = dataframe.pivot_table(index="series_id",columns=["year","quarter"],values=valuesForDF,aggfunc='first')
+        df = dataframe.pivot_table(index="series_id",columns="reference_period",values=valuesForDF,aggfunc='first')
         # Drops the columns that are in the toDrop list
         dataframe = dataframe.drop(columns=toDropFromDataframe)
         # Eliminates the duplicate rows from the dataframe.
         dataframe = dataframe.drop_duplicates()
         # Merges the pivoted dataframe and the original one.
         result = pd.merge(left=dataframe,right=df,how='inner',right_index=True,left_on='series_id')
+        result.columns = modifyHeaders(result)
         return result
     # Checks if the user has had the data formatted by years.
     elif avgYear == 1:
@@ -340,13 +360,14 @@ def wideFormat(dataframe,avgQrt,avgYear,timeForm,percentageChg,yearToDrop):
         dataframe = dataframe.drop_duplicates()
         result = pd.merge(left=dataframe,right=df,how='inner',right_index=True,left_on='series_id')
         # Merges the pivoted dataframe and the original one.
+        result.columns = modifyHeaders(result)
         return result
     # Checks if the user has had the time formatted..
     elif timeForm == 1:
         # Columns to drop from the original dataframe
-        toDropFromDataframe = ["formatted_time","value","footnote_code"]
+        toDropFromDataframe = ["formatted_time","value","footnote_codes"]
         # Values that will be included in the wide formatting
-        valuesForDF = ["value","footnote_code"]
+        valuesForDF = ["value","footnote_codes"]
         # Checks if percentage change is selected
         if percentageChg == 1:
             # Adds the percent_change column to the dropped column list and the value list
@@ -364,12 +385,13 @@ def wideFormat(dataframe,avgQrt,avgYear,timeForm,percentageChg,yearToDrop):
         dataframe = dataframe.drop_duplicates()
         # Merges the pivoted dataframe and the original one.
         result = pd.merge(left=dataframe,right=df,how='inner',right_index=True,left_on='series_id')
+        result.columns = modifyHeaders(result)
         return result
     else:
         # Columns to drop from the original dataframe
-        toDropFromDataframe = ["year","period","value","footnote_code"]
+        toDropFromDataframe = ["year","period","value","footnote_codes"]
         # Values that will be included in the wide formatting
-        valuesForDF = ["value","footnote_code"]
+        valuesForDF = ["value","footnote_codes"]
         # Checks if percentage change is selected
         if percentageChg == 1:
             # Adds the percent_change column to the dropped column list and the value list
@@ -387,6 +409,7 @@ def wideFormat(dataframe,avgQrt,avgYear,timeForm,percentageChg,yearToDrop):
         dataframe = dataframe.drop_duplicates()
         # Merges the pivoted dataframe and the original one.
         result = pd.merge(left=dataframe,right=df,how='inner',right_index=True,left_on='series_id')
+        result.columns = modifyHeaders(result)
         return result
 
 # Modifies the row headers. Takes the column titles from the first row in the dataframe and renames the column index titles with the content. 
