@@ -6,7 +6,7 @@ import csv
 path = str(os.path.dirname(os.path.realpath(__file__)))
 #QuartersArr: Contains the quarters used in the quartising function. 
 quartersArr = ["M01M02M03","M04M05M06","M07M08M09","M10M11M12"]
-
+pcProxy = {}
 #Quarter class: Used in the calculation of the quarterly values.
 class quarters:
     def __init__(self, q1, q2, q3, q4):
@@ -18,7 +18,7 @@ class quarters:
 #Gets the latest version of the pc.data.0.Current using the BLS_Request library located in BLS_Request.py
 def checkForLatestVersion():
     # Compares the latest version online with the latest version downloaded, if the online version is newer, the online one is downloaded.
-    BLS_Request.compareLatestOnlineVersionWithLatestDownloadedVersion("pcCur","Current")
+    BLS_Request.compareLatestOnlineVersionWithLatestDownloadedVersion("pcCur","Current",pcProxy)
 
 #Reads a parquet file and turns it into pyarrow table, then .to_pandas() converts the table to a dataframe.
 def readCSV(fileName):
@@ -219,9 +219,9 @@ def createCustomFormattedDataFrame(dataFrame,inputArray):
         dataFrame = periodOverPeriodCalculation(dataFrame)
     if labelAdd == True:
         # Gets the group labels using the BLS_Request library.
-        BLS_Request.compareLatestOnlineVersionWithLatestDownloadedVersion("pcInd","groupLabels")
+        BLS_Request.compareLatestOnlineVersionWithLatestDownloadedVersion("pcInd","groupLabels",pcProxy)
         # Gets the item labels using the BLS_Request library.
-        BLS_Request.compareLatestOnlineVersionWithLatestDownloadedVersion("pcLRef","labels")
+        BLS_Request.compareLatestOnlineVersionWithLatestDownloadedVersion("pcLRef","labels",pcProxy)
         # Creates the paths for the for the item labels and the group labels
         newPath = os.path.join(path,'RawData',BLS_Request.getLatestVersionFileName("pcLRef",BLS_Request.getAllFilesInDirectory("pcLRef")))
         newGroupPath = os.path.join(path,'RawData',BLS_Request.getLatestVersionFileName("pcInd",BLS_Request.getAllFilesInDirectory("pcInd")))
@@ -421,6 +421,7 @@ def changeRowHeaders(dataFrame):
 
 # A function that encapsulates all the code that is needed to be run to produce formatted data.
 def pcProcessing(inputArr):
-    BLS_Request.compareLatestOnlineVersionWithLatestDownloadedVersion("pcCur","Current")
+    pcProxy["http"] = inputArr[len(inputArr)-1].get("http")
+    BLS_Request.compareLatestOnlineVersionWithLatestDownloadedVersion("pcCur","Current",inputArr[len(inputArr)-1])
     newPath = os.path.join(path,'RawData',BLS_Request.getLatestVersionFileName("pcCur",BLS_Request.getAllFilesInDirectory("pcCur")))
     return createCustomFormattedDataFrame(changeRowHeaders(readCSV(newPath)).drop([0]),inputArr)

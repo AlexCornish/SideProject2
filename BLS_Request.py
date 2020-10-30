@@ -7,6 +7,7 @@ import os
 path = str(os.path.dirname(os.path.realpath(__file__))) 
 #BLS_BASE_URL: The base url from which all the data will be accessed. 
 BLS_BASE_URL = "https://download.bls.gov/pub/time.series/"
+proxy = {}
 # urlDict: A dictionary that contains all of the end url parts that lead to the data that will be used by this program.
 urlDict = {
     "pc": "pc",
@@ -25,7 +26,7 @@ def checkForLatestVersion(wpOrpc,fileNameToCheckFor):
     # Gets the main downloads page from which the time of latest update can be accessed
     url = os.path.join(BLS_BASE_URL,urlDict[wpOrpc])
     # The URL is selected
-    page = requests.get(url)
+    page = requests.get(url,proxies=proxy)
     # The text access through the request gets converted to a string.
     tempString = str(page.text)
     tempString = tempString.split()
@@ -48,6 +49,8 @@ def pmConverter(dateTimeStr):
 
 # convertToDateObj: Converts string to dateTime object.
 def convertToDateObj(dateTimeStr):
+    if ">" in dateTimeStr:
+        dateTimeStr = dateTimeStr.rsplit(">",1)[1]
     if "PM" in dateTimeStr:
         return convertFormat(str(pmConverter(dateTimeStr))[:-3])
     timeStr = str(datetime.datetime.strptime(dateTimeStr[:-4], '%m/%d/%Y %H:%M'))[:-3]
@@ -60,7 +63,7 @@ def convertFormat(dateTimeStr):
 
 # getBLSData: Performs a GET request to get the BLS data from the specific URL.
 def getBLSData(url, wpOrpc):
-    r = requests.get(url)
+    r = requests.get(url,proxies=proxy)
     tempInfo = r.text
     tempArr = []
     tempInfo = tempInfo.splitlines()
@@ -72,7 +75,8 @@ def getBLSData(url, wpOrpc):
     return tempArr
 
 # compareLatestOnlineVersionWithLatestDownloadedVersion: Compares the latest online version with the latest downloaded version.
-def compareLatestOnlineVersionWithLatestDownloadedVersion(wpOrpc,fileNameToCheckFor):
+def compareLatestOnlineVersionWithLatestDownloadedVersion(wpOrpc,fileNameToCheckFor,inputproxy):
+    proxy["http"] = inputproxy.get("http")
     # Gets the date and time of the latest downloaded version
     downloadDate, downloadTime = determineLatestVersionDownloaded(getAllFilesInDirectory(wpOrpc))
     # Checks if the latest date of the downloaded version is not the default value for a datetime object, which would indicate that no downloaded version exists.

@@ -6,7 +6,7 @@ import csv
 path = str(os.path.dirname(os.path.realpath(__file__)))
 #QuartersArr: Contains the quarters used in the quartising function. 
 quartersArr = ["M01M02M03","M04M05M06","M07M08M09","M10M11M12"]
-
+wpProxy = {}
 #Quarter class: Used in the calculation of the quarterly values.
 class quarters:
     def __init__(self, q1, q2, q3, q4):
@@ -18,7 +18,7 @@ class quarters:
 #Gets the latest version of the wp.data.0.Current using the BLS_Request library located in BLS_Request.py
 def checkForLatestVersion():
     # Compares the latest version online with the latest version downloaded, if the online version is newer, the online one is downloaded.
-    BLS_Request.compareLatestOnlineVersionWithLatestDownloadedVersion("wpCur","Current")
+    BLS_Request.compareLatestOnlineVersionWithLatestDownloadedVersion("wpCur","Current",wpProxy)
 
 #Reads a csv file and turns it into a dataframe.
 def readCSV(fileName):
@@ -232,14 +232,15 @@ def createCustomFormattedDataFrame(dataFrame,inputArray):
     if percentageChg == True:
         # Returns the dataframe with period over period calculations performed.
         dataFrame = periodOverPeriodCalculation(dataFrame)
+    # Gets the group labels using the BLS_Request library.
+    BLS_Request.compareLatestOnlineVersionWithLatestDownloadedVersion("wpGrp","groupLabels",wpProxy)
+    # Gets the item labels using the BLS_Request library.
+    BLS_Request.compareLatestOnlineVersionWithLatestDownloadedVersion("wpLRef","labels",wpProxy)
+    # Creates the paths for the for the item labels and the group labels
+    newPath = os.path.join(path,'RawData',BLS_Request.getLatestVersionFileName("wpLRef",BLS_Request.getAllFilesInDirectory("wpLRef")))
+    newGroupPath = os.path.join(path,'RawData',BLS_Request.getLatestVersionFileName("wpGrp",BLS_Request.getAllFilesInDirectory("wpGrp")))
+    
     if labelAdd == True:
-        # Gets the group labels using the BLS_Request library.
-        BLS_Request.compareLatestOnlineVersionWithLatestDownloadedVersion("wpGrp","groupLabels")
-        # Gets the item labels using the BLS_Request library.
-        BLS_Request.compareLatestOnlineVersionWithLatestDownloadedVersion("wpLRef","labels")
-        # Creates the paths for the for the item labels and the group labels
-        newPath = os.path.join(path,'RawData',BLS_Request.getLatestVersionFileName("wpLRef",BLS_Request.getAllFilesInDirectory("wpLRef")))
-        newGroupPath = os.path.join(path,'RawData',BLS_Request.getLatestVersionFileName("wpGrp",BLS_Request.getAllFilesInDirectory("wpGrp")))
         # Modifies the row headers for the two data frames.
 
         newGroupFrame = changeRowHeaders(readCSV(newGroupPath))
@@ -287,6 +288,8 @@ def createCustomFormattedDataFrame(dataFrame,inputArray):
             columnRow = dataFrame["series_id"][row]
             # adds the seasonal letter to the seasonal array
             seasonal.append(columnRow[2:3])
+            newGroupFrame = changeRowHeaders(readCSV(newGroupPath))
+            newDataFrame = changeRowHeaders(readCSV(newPath))
             # Checks if this splice of the series_id is in the list of group codes
             if columnRow[3:5] in newGroupFrame["group_code"].tolist():
                 # If this splice is in the group code list, it is added to the group code array and the last part of the series_id is added to the itemcode.
@@ -439,6 +442,7 @@ def changeRowHeaders(dataFrame):
 
 # A function that encapsulates all the code that is needed to be run to produce formatted data.
 def wpProcessing(inputArr):
-    BLS_Request.compareLatestOnlineVersionWithLatestDownloadedVersion("wpCur","Current")
+    wpProxy["http"] = inputArr[len(inputArr)-1].get("http")
+    BLS_Request.compareLatestOnlineVersionWithLatestDownloadedVersion("wpCur","Current",inputArr[len(inputArr)-1])
     newPath = os.path.join(path,'RawData',BLS_Request.getLatestVersionFileName("wpCur",BLS_Request.getAllFilesInDirectory("wpCur")))
     return createCustomFormattedDataFrame(changeRowHeaders(readCSV(newPath)).drop([0]),inputArr)

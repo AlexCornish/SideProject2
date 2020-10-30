@@ -5,10 +5,36 @@ import industry
 from PyQt5.QtWidgets import QApplication,QLineEdit,QPushButton,QCheckBox,QWidget, QVBoxLayout,QHBoxLayout,QLabel, QRadioButton,QGridLayout, QButtonGroup, QFileDialog
 from PyQt5.QtCore import QTimer
 
+proxies = {}
+class secondWindow(QWidget):
+    def __init__(self):
+        super().__init__()
+        layout = QVBoxLayout()
+        self.setFixedSize(300,340)
+        self.setWindowTitle("PROXY LOGIN")
+        label = QLabel(self)
+        label.setText("Proxy Username: ")
+        newTextbox = QLineEdit(self)
+        label1 = QLabel(self)
+        label1.setText("Proxy Password: ")
+        newTextbox1 = QLineEdit(self)
+        layout.addWidget(label)
+        layout.addWidget(newTextbox)
+        layout.addWidget(label1)
+        layout.addWidget(newTextbox1)
+        submitButton = QPushButton("Save")
+        submitButton.clicked.connect(lambda:proxySet(newTextbox.text(),newTextbox1.text(),self))
+        layout.addWidget(submitButton)
+        self.setLayout(layout)
+    def closeSecondWindow_OpenGUI(self):
+        print("closeSecondWindow_OpenGUI")
+        self.close()
+        GUI()
 
 class GUI(QWidget):
     def __init__(self):
         super(GUI,self).__init__()
+        print("inint gui")
         self.win = QWidget()
         self.win.setFixedSize(300,340)  
         self.win.setWindowTitle("BLS Request")
@@ -87,6 +113,15 @@ class GUI(QWidget):
         self.win.setLayout(vbox)
         self.win.show()
 
+def proxySet(Username,password,self):
+    self.close()
+    proxy_ip = "127.0.0.1"
+    proxy_port = "5000"
+    httpFull = "http://" + Username + ":" + password + "@" + proxy_ip + ":" + proxy_port
+    print(httpFull)
+    proxies["http"] = httpFull
+    self.closeSecondWindow_OpenGUI()
+
 def disableMonthly(c1,c2,c3):
     c1.setEnabled(False)
     c2.setEnabled(False)
@@ -98,12 +133,14 @@ def enableMonthly(c1,c2,c3):
     c3.setEnabled(True)
 
 def performDataFuncs(wpRB, pcRB,yearly,quarterly,monthly,c1,c2,c3,c4,c5,c6,c7,c8):
+    print("_____________________")
+    print(proxies)
     if wpRB.isChecked(): 
-        inputArr = [yearly,quarterly,monthly,c1,c2,c3,c4,c5,c6,c7,c8]
+        inputArr = [yearly,quarterly,monthly,c1,c2,c3,c4,c5,c6,c7,c8,proxies]
         data = commodity.wpProcessing(inputArr)
         openFileSaveAs(data)
     elif pcRB.isChecked():
-        inputArr = [yearly,quarterly,monthly,c1,c2,c3,c4,c5,c6,c7,c8]
+        inputArr = [yearly,quarterly,monthly,c1,c2,c3,c4,c5,c6,c7,c8,proxies]
         data = industry.pcProcessing(inputArr)
         openFileSaveAs(data)
 
@@ -115,7 +152,9 @@ def openFileSaveAs(data):
 
 app = QApplication([])
 if __name__ == "__main__":
+    w = secondWindow()
     win = GUI()
+    w.show()
     app.exec_()
 
    
